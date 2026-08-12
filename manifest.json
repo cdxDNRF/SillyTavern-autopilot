@@ -1,0 +1,15 @@
+{
+    "display_name": "AutoPilot",
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "AutoPilot",
+    "version": "2.0.0",
+    "homePage": "https://github.com/cdxDNRF/autopilot",
+    "auto_update": true,
+    "hooks": {
+        "activate": "init"
+    }
+}

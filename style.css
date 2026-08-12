@@ -1,0 +1,106 @@
+/* AutoPilot Extension Styles */
+
+#autopilot_container, #autopilot_ext_container {
+    margin-top: 5px;
+    padding: 8px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.15);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#autopilot_container:has(input:checked), #autopilot_ext_container:has(input:checked) {
+    border-color: var(--SmartThemeQuoteColor, #4a90d9) !important;
+    box-shadow: 0 0 8px rgba(74, 144, 217, 0.3);
+}
+
+.autopilot_header, .extension_toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.autopilot_header .checkbox_label, .extension_toggle .checkbox_label {
+    font-weight: bold;
+}
+
+.autopilot-status {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.autopilot-on {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.4);
+    animation: autopilot-pulse 2s ease-in-out infinite;
+}
+
+.autopilot-off {
+    background: rgba(158, 158, 158, 0.15);
+    color: #9e9e9e;
+    border: 1px solid rgba(158, 158, 158, 0.3);
+}
+
+@keyframes autopilot-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.autopilot_settings, .extension_settings_body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 5px;
+}
+
+.autopilot_row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.autopilot_row input[type="number"] {
+    width: 60px;
+    text-align: center;
+}
+
+.autopilot-director-settings {
+    margin-left: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    animation: fadeIn 0.3s ease;
+}
+
+.autopilot-director-settings.hidden {
+    display: none;
+}
+
+.autopilot-director-settings textarea {
+    resize: vertical;
+    min-height: 40px;
+    opacity: 0.85;
+    font-size: 12px !important;
+}
+
+.autopilot_stats {
+    display: flex;
+    gap: 15px;
+    font-size: 11px;
+    opacity: 0.7;
+    margin-top: 3px;
+    padding-top: 5px;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
