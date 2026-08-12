@@ -23,17 +23,17 @@ const MODULE_KEY = 'autopilot';
 const EXTENSION_NAME = 'third-party/autopilot';
 
 const PLOT_GENRES = {
-    'free': 'Free (No theme)',
-    'adventure': 'Adventure',
-    'romance': 'Romance',
-    'mystery': 'Mystery',
-    'comedy': 'Comedy',
-    'drama': 'Drama',
-    'horror': 'Horror',
-    'scifi': 'Sci-Fi',
-    'fantasy': 'Fantasy',
-    'action': 'Action',
-    'slice': 'Slice of Life',
+    'free': '自由（无主题）',
+    'adventure': '冒险',
+    'romance': '恋爱',
+    'mystery': '悬疑',
+    'comedy': '喜剧',
+    'drama': '剧情',
+    'horror': '恐怖',
+    'scifi': '科幻',
+    'fantasy': '奇幻',
+    'action': '动作',
+    'slice': '日常',
 };
 
 const DEFAULT_DIRECTOR_PROMPT = [
@@ -126,7 +126,7 @@ async function autopilotWorker() {
 
     // Check turn limit
     if (settings.maxTurns > 0 && turnCount >= settings.maxTurns) {
-        toastr.info(`Reached ${settings.maxTurns} turns. AutoPilot stopping.`, 'AutoPilot', { timeOut: 4000 });
+        toastr.info(`已达到 ${settings.maxTurns} 轮，AutoPilot 自动停止。`, 'AutoPilot', { timeOut: 4000 });
         stopAutoPilot();
         return;
     }
@@ -168,6 +168,11 @@ function buildDirectorPrompt() {
         prompt += `\n\nThe story genre is: ${genreName}. Keep developments consistent with this genre.`;
     }
 
+    // Add active characters if character filter is set
+    if (Array.isArray(settings.characterFilter) && settings.characterFilter.length > 0) {
+        prompt += `\n\nThe active characters in this scene are: ${settings.characterFilter.join(', ')}. Focus your narrative developments on these characters.`;
+    }
+
     // Add intensity
     const intensityMap = {
         'low': 'Keep developments subtle and gradual.',
@@ -190,7 +195,7 @@ async function storyDirectorIntervene() {
     const settings = getSettings();
     const prompt = buildDirectorPrompt();
 
-    toastr.info('Story Director is generating a plot development...', 'AutoPilot', { timeOut: 3000 });
+    toastr.info('剧情导演正在生成剧情发展...', 'AutoPilot', { timeOut: 3000 });
 
     try {
         const direction = await ctx.generateQuietPrompt({
@@ -223,11 +228,11 @@ async function storyDirectorIntervene() {
             updateTurnDisplay();
 
             const preview = direction.trim().substring(0, 80);
-            toastr.success(preview + '...', 'Story Director', { timeOut: 5000 });
+            toastr.success(preview + '...', '剧情导演', { timeOut: 5000 });
         }
     } catch (e) {
         console.error('[AutoPilot] Story Director error:', e);
-        toastr.warning('Story Director encountered an error.', 'AutoPilot');
+        toastr.warning('剧情导演遇到错误。', 'AutoPilot');
     }
 }
 
@@ -267,8 +272,8 @@ function startAutoPilot() {
         }
     });
 
-    const turnsInfo = settings.maxTurns > 0 ? ` (max ${settings.maxTurns} turns)` : ' (unlimited)';
-    toastr.success(`AutoPilot engaged!${turnsInfo}`, 'AutoPilot', { timeOut: 3000 });
+    const turnsInfo = settings.maxTurns > 0 ? `（最多 ${settings.maxTurns} 轮）` : '（无限轮次）';
+    toastr.success(`AutoPilot 已启动！${turnsInfo}`, 'AutoPilot', { timeOut: 3000 });
     updateTurnDisplay();
 }
 
@@ -293,21 +298,21 @@ function stopAutoPilot() {
     updateStatusDisplay();
     updateTurnDisplay();
 
-    toastr.info('AutoPilot stopped.', 'AutoPilot', { timeOut: 2000 });
+    toastr.info('AutoPilot 已停止。', 'AutoPilot', { timeOut: 2000 });
 }
 
 function pauseAutoPilot() {
     if (!isRunning || isPaused) return;
     isPaused = true;
     updateStatusDisplay();
-    toastr.info('AutoPilot paused.', 'AutoPilot', { timeOut: 2000 });
+    toastr.info('AutoPilot 已暂停。', 'AutoPilot', { timeOut: 2000 });
 }
 
 function resumeAutoPilot() {
     if (!isRunning || !isPaused) return;
     isPaused = false;
     updateStatusDisplay();
-    toastr.info('AutoPilot resumed.', 'AutoPilot', { timeOut: 2000 });
+    toastr.info('AutoPilot 已恢复。', 'AutoPilot', { timeOut: 2000 });
 }
 
 function toggleAutoPilot() {
@@ -330,24 +335,24 @@ function togglePause() {
 // Manual trigger: generate one turn immediately
 async function triggerNextTurnNow() {
     if (!isRunning) {
-        toastr.warning('Start AutoPilot first.', 'AutoPilot');
+        toastr.warning('请先启动 AutoPilot。', 'AutoPilot');
         return;
     }
     if (is_group_generating) {
-        toastr.warning('Already generating, please wait...', 'AutoPilot');
+        toastr.warning('正在生成中，请稍候...', 'AutoPilot');
         return;
     }
-    toastr.info('Triggering next turn...', 'AutoPilot', { timeOut: 1500 });
+    toastr.info('正在触发下一轮...', 'AutoPilot', { timeOut: 1500 });
     await autopilotWorker();
 }
 
 // Manual trigger: director intervenes now
 async function triggerDirectorNow() {
     if (!selected_group) {
-        toastr.warning('Open a group chat first.', 'AutoPilot');
+        toastr.warning('请先打开群聊。', 'AutoPilot');
         return;
     }
-    toastr.info('Story Director intervening now...', 'AutoPilot', { timeOut: 2000 });
+    toastr.info('剧情导演正在介入...', 'AutoPilot', { timeOut: 2000 });
     await storyDirectorIntervene();
 }
 
@@ -403,21 +408,21 @@ function refreshCharacterList() {
     if (container.length === 0) return;
 
     if (names.length === 0) {
-        container.html('<span style="opacity:0.5; font-size:11px;">Open a group chat to see characters</span>');
+        container.html('<span style="opacity:0.5; font-size:11px;">打开群聊后显示角色列表</span>');
         return;
     }
 
     let html = '';
     // "All characters" option
-    html += `<label class="checkbox_label whitespacenowrap" style="font-size:12px;" title="Use all characters in the group">
+    html += `<label class="checkbox_label whitespacenowrap" style="font-size:12px;" title="使用群聊中所有角色">
         <input id="autopilot_ext_char_all" type="checkbox" ${settings.characterFilter.length === 0 ? 'checked' : ''} />
-        <span>All Characters</span>
+        <span>全部角色</span>
     </label>`;
 
     // Individual characters
     for (const name of names) {
         const checked = settings.characterFilter.includes(name);
-        html += `<label class="checkbox_label whitespacenowrap" style="font-size:12px; margin-left:12px;" title="Include this character in auto-dialogue">
+        html += `<label class="checkbox_label whitespacenowrap" style="font-size:12px; margin-left:12px;" title="选择此角色参与自动对话">
             <input class="autopilot-char-cb" type="checkbox" data-name="${escapeHtml(name)}" ${checked ? 'checked' : ''} />
             <span>${escapeHtml(name)}</span>
         </label>`;
@@ -451,15 +456,15 @@ function refreshCharacterList() {
 // ==================== UI Display Updates ====================
 
 function updateStatusDisplay() {
-    let statusText = 'Stopped';
+    let statusText = '已停止';
     let statusClass = 'autopilot-off';
 
     if (isRunning) {
         if (isPaused) {
-            statusText = 'Paused';
+            statusText = '已暂停';
             statusClass = 'autopilot-paused';
         } else {
-            statusText = 'Running';
+            statusText = '运行中';
             statusClass = 'autopilot-on';
         }
     }
@@ -468,14 +473,14 @@ function updateStatusDisplay() {
     $('#autopilot_ext_status').removeClass('autopilot-on autopilot-off autopilot-paused').addClass(statusClass).text(statusText);
 
     // Update pause button text
-    const pauseText = isPaused ? 'Resume' : 'Pause';
+    const pauseText = isPaused ? '继续' : '暂停';
     $('#autopilot_ext_pause_btn').text(pauseText);
 }
 
 function updateTurnDisplay() {
     const settings = getSettings();
     const maxStr = settings.maxTurns > 0 ? ` / ${settings.maxTurns}` : '';
-    const turnStr = `Turn: ${turnCount}${maxStr}`;
+    const turnStr = `轮次: ${turnCount}${maxStr}`;
 
     $('#autopilot_ext_turn_display').text(turnStr);
     $('#autopilot_ext_stat_msgs').text(settings.stats.totalMessages);
@@ -494,70 +499,70 @@ function buildSettingsHTML() {
     }
 
     return `
-    <div class="autopilot_section_title"><i class="fa-solid fa-gauge-high"></i> Run Control</div>
+    <div class="autopilot_section_title"><i class="fa-solid fa-gauge-high"></i> 运行控制</div>
     <div class="autopilot_row">
-        <span title="Delay between auto-dialogue rounds (seconds)">Delay (s):</span>
+        <span title="每轮自动对话之间的间隔（秒）">间隔(秒):</span>
         <input id="autopilot_ext_delay" class="text_pole textarea_compact" type="number" min="1" max="120" step="1" value="${settings.delay}" style="width: 60px;" />
-        <span title="Maximum turns before auto-stop (0 = unlimited)">Max Turns:</span>
+        <span title="达到此轮次后自动停止（0 = 无限）">最大轮次:</span>
         <input id="autopilot_ext_max_turns" class="text_pole textarea_compact" type="number" min="0" max="9999" step="1" value="${settings.maxTurns}" style="width: 60px;" />
     </div>
     <div class="autopilot_row">
-        <span id="autopilot_ext_turn_display" class="autopilot-turn-counter">Turn: 0</span>
+        <span id="autopilot_ext_turn_display" class="autopilot-turn-counter">轮次: 0</span>
     </div>
     <div class="autopilot_button_row">
-        <button id="autopilot_ext_pause_btn" class="menu_button menu_button_small" title="Pause/Resume auto-dialogue"><i class="fa-solid fa-pause"></i> Pause</button>
-        <button id="autopilot_ext_next_btn" class="menu_button menu_button_small" title="Trigger next turn immediately"><i class="fa-solid fa-forward-step"></i> Next Turn</button>
-        <button id="autopilot_ext_director_btn" class="menu_button menu_button_small" title="Trigger Story Director now"><i class="fa-solid fa-clapperboard"></i> Director Now</button>
+        <button id="autopilot_ext_pause_btn" class="menu_button menu_button_small" title="暂停/恢复自动对话"><i class="fa-solid fa-pause"></i> 暂停</button>
+        <button id="autopilot_ext_next_btn" class="menu_button menu_button_small" title="立即触发下一轮对话"><i class="fa-solid fa-forward-step"></i> 下一轮</button>
+        <button id="autopilot_ext_director_btn" class="menu_button menu_button_small" title="立即触发剧情导演"><i class="fa-solid fa-clapperboard"></i> 导演介入</button>
     </div>
 
-    <div class="autopilot_section_title"><i class="fa-solid fa-clapperboard"></i> Story Director</div>
-    <label class="checkbox_label whitespacenowrap" title="Story Director injects plot developments periodically">
+    <div class="autopilot_section_title"><i class="fa-solid fa-clapperboard"></i> 剧情导演</div>
+    <label class="checkbox_label whitespacenowrap" title="剧情导演会定期注入剧情发展">
         <input id="autopilot_ext_director" type="checkbox" />
-        <span>Enable Story Director</span>
+        <span>启用剧情导演</span>
     </label>
     <div id="autopilot_ext_director_settings" class="autopilot-director-settings ${settings.storyDirector ? '' : 'hidden'}">
         <div class="autopilot_row">
-            <span title="Story Director intervenes every N turns">Interval (turns):</span>
+            <span title="剧情导演每 N 轮介入一次">间隔(轮):</span>
             <input id="autopilot_ext_director_interval" class="text_pole textarea_compact" type="number" min="1" max="50" step="1" value="${settings.directorInterval}" style="width: 60px;" />
         </div>
         <div class="autopilot_row">
-            <span title="Select story genre/theme">Genre:</span>
+            <span title="选择故事类型/主题">类型:</span>
             <select id="autopilot_ext_genre" class="text_pole textarea_compact" style="width: 140px; font-size: 12px;">
                 ${genreOptions}
             </select>
         </div>
         <div class="autopilot_row">
-            <span title="How dramatic should plot developments be">Intensity:</span>
+            <span title="剧情发展的戏剧程度">强度:</span>
             <select id="autopilot_ext_intensity" class="text_pole textarea_compact" style="width: 120px; font-size: 12px;">
-                <option value="low" ${settings.plotIntensity === 'low' ? 'selected' : ''}>Low (subtle)</option>
-                <option value="medium" ${settings.plotIntensity === 'medium' ? 'selected' : ''}>Medium</option>
-                <option value="high" ${settings.plotIntensity === 'high' ? 'selected' : ''}>High (dramatic)</option>
+                <option value="low" ${settings.plotIntensity === 'low' ? 'selected' : ''}>低（平缓）</option>
+                <option value="medium" ${settings.plotIntensity === 'medium' ? 'selected' : ''}>中（平衡）</option>
+                <option value="high" ${settings.plotIntensity === 'high' ? 'selected' : ''}>高（戏剧性）</option>
             </select>
         </div>
         <div class="autopilot_field">
-            <span class="autopilot_field_label" title="Describe where you want the story to go">Plot Direction / Goal:</span>
-            <textarea id="autopilot_ext_plot_direction" class="text_pole textarea_compact" rows="2" placeholder="e.g., The characters discover a hidden underground city..." style="width: 100%; font-size: 12px;">${escapeHtml(settings.plotDirection)}</textarea>
+            <span class="autopilot_field_label" title="描述你希望剧情发展的方向">剧情方向/目标:</span>
+            <textarea id="autopilot_ext_plot_direction" class="text_pole textarea_compact" rows="2" placeholder="例如：角色们发现了一座隐藏的地下城市..." style="width: 100%; font-size: 12px;">${escapeHtml(settings.plotDirection)}</textarea>
         </div>
         <div class="autopilot_field">
-            <span class="autopilot_field_label" title="Custom prompt for the Story Director AI">Director Prompt (advanced):</span>
-            <textarea id="autopilot_ext_director_prompt" class="text_pole textarea_compact" rows="3" placeholder="Story Director prompt..." style="width: 100%; font-size: 12px;">${escapeHtml(settings.directorPrompt)}</textarea>
+            <span class="autopilot_field_label" title="自定义剧情导演的提示词（高级）">导演提示词（高级）:</span>
+            <textarea id="autopilot_ext_director_prompt" class="text_pole textarea_compact" rows="3" placeholder="剧情导演提示词..." style="width: 100%; font-size: 12px;">${escapeHtml(settings.directorPrompt)}</textarea>
         </div>
     </div>
 
-    <div class="autopilot_section_title"><i class="fa-solid fa-users"></i> Character Filter</div>
+    <div class="autopilot_section_title"><i class="fa-solid fa-users"></i> 角色过滤</div>
     <div id="autopilot_ext_char_list" class="autopilot-char-list">
-        <span style="opacity:0.5; font-size:11px;">Open a group chat to see characters</span>
+        <span style="opacity:0.5; font-size:11px;">打开群聊后显示角色列表</span>
     </div>
 
-    <div class="autopilot_section_title"><i class="fa-solid fa-cog"></i> Options</div>
-    <label class="checkbox_label whitespacenowrap" title="Automatically start AutoPilot when opening a group chat">
+    <div class="autopilot_section_title"><i class="fa-solid fa-cog"></i> 选项</div>
+    <label class="checkbox_label whitespacenowrap" title="打开群聊时自动启动 AutoPilot">
         <input id="autopilot_ext_autostart" type="checkbox" />
-        <span>Auto-start on group open</span>
+        <span>打开群聊时自动启动</span>
     </label>
 
     <div class="autopilot_stats">
-        <span title="Total auto-generated messages">Messages: <span id="autopilot_ext_stat_msgs">${settings.stats.totalMessages}</span></span>
-        <span title="Story Director interventions">Directors: <span id="autopilot_ext_stat_dirs">${settings.stats.directorInterventions}</span></span>
+        <span title="自动生成的消息总数">消息数: <span id="autopilot_ext_stat_msgs">${settings.stats.totalMessages}</span></span>
+        <span title="剧情导演介入次数">导演介入: <span id="autopilot_ext_stat_dirs">${settings.stats.directorInterventions}</span></span>
     </div>`;
 }
 
@@ -571,13 +576,13 @@ function injectExtensionSettings() {
     const html = `
     <div id="autopilot_ext_container" class="extension_container" style="margin-bottom: 10px;">
         <div class="autopilot_ext_header" style="display: flex; align-items: center; justify-content: space-between; padding: 5px 0;">
-            <label class="checkbox_label whitespacenowrap" title="Enable AutoPilot auto-dialogue for group chats">
+            <label class="checkbox_label whitespacenowrap" title="启用群聊自动对话">
                 <input id="autopilot_ext_toggle" type="checkbox" />
                 <span><i class="fa-solid fa-plane-departure"></i> AutoPilot</span>
             </label>
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span id="autopilot_ext_status" class="autopilot-status autopilot-off">Stopped</span>
-                <i id="autopilot_ext_collapse" class="fa-solid fa-chevron-down autopilot-collapse-icon" title="Click to expand/collapse settings" style="cursor: pointer; font-size: 14px; padding: 2px 6px;"></i>
+                <span id="autopilot_ext_status" class="autopilot-status autopilot-off">已停止</span>
+                <i id="autopilot_ext_collapse" class="fa-solid fa-chevron-down autopilot-collapse-icon" title="点击展开/折叠设置" style="cursor: pointer; font-size: 14px; padding: 2px 6px;"></i>
             </div>
         </div>
         <div id="autopilot_ext_settings_body" class="extension_settings_body" style="padding: 5px 10px;">
@@ -607,13 +612,13 @@ function injectGroupChatUI() {
     const html = `
     <div id="autopilot_container" class="autopilot_section">
         <div class="autopilot_header">
-            <label class="checkbox_label whitespacenowrap" title="Enable AutoPilot auto-dialogue">
+            <label class="checkbox_label whitespacenowrap" title="启用自动对话">
                 <input id="autopilot_toggle" type="checkbox" />
                 <span><i class="fa-solid fa-plane-departure"></i> AutoPilot</span>
             </label>
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span id="autopilot_status" class="autopilot-status autopilot-off">Stopped</span>
-                <i id="autopilot_group_settings" class="fa-solid fa-gear autopilot-group-settings-icon" title="Open AutoPilot settings" style="cursor: pointer; font-size: 14px; padding: 2px 6px;"></i>
+                <span id="autopilot_status" class="autopilot-status autopilot-off">已停止</span>
+                <i id="autopilot_group_settings" class="fa-solid fa-gear autopilot-group-settings-icon" title="打开 AutoPilot 设置" style="cursor: pointer; font-size: 14px; padding: 2px 6px;"></i>
             </div>
         </div>
     </div>`;
@@ -824,31 +829,31 @@ function registerSlashCommands() {
                     const action = (value || '').trim().toLowerCase();
                     if (action === 'start' || action === 'on') {
                         if (!isRunning) startAutoPilot();
-                        return 'AutoPilot started';
+                        return 'AutoPilot 已启动';
                     } else if (action === 'stop' || action === 'off') {
                         if (isRunning) stopAutoPilot();
-                        return 'AutoPilot stopped';
+                        return 'AutoPilot 已停止';
                     } else if (action === 'pause') {
                         pauseAutoPilot();
-                        return 'AutoPilot paused';
+                        return 'AutoPilot 已暂停';
                     } else if (action === 'resume') {
                         resumeAutoPilot();
-                        return 'AutoPilot resumed';
+                        return 'AutoPilot 已恢复';
                     } else if (action === 'next') {
                         triggerNextTurnNow();
-                        return 'Triggering next turn';
+                        return '正在触发下一轮';
                     } else if (action === 'director') {
                         triggerDirectorNow();
-                        return 'Triggering Story Director';
+                        return '正在触发剧情导演';
                     } else if (action === 'status') {
                         const s = getSettings();
                         const turns = s.maxTurns > 0 ? `${turnCount}/${s.maxTurns}` : `${turnCount}`;
-                        return isRunning ? `AutoPilot running (turn ${turns})` : 'AutoPilot is stopped';
+                        return isRunning ? `AutoPilot 运行中（第 ${turns} 轮）` : 'AutoPilot 已停止';
                     }
-                    return 'Usage: /autopilot [start|stop|pause|resume|next|director|status]';
+                    return '用法: /autopilot [start|stop|pause|resume|next|director|status]';
                 },
-                helpString: 'Control AutoPilot: /autopilot start|stop|pause|resume|next|director|status',
-                returns: 'status string',
+                helpString: '控制 AutoPilot: /autopilot start|stop|pause|resume|next|director|status',
+                returns: '状态信息',
             }),
         );
     }
@@ -909,5 +914,5 @@ export function init() {
 
     registerSlashCommands();
 
-    console.log('[AutoPilot] Extension initialized v3.0.0. Use the AutoPilot toggle in Extensions settings or /autopilot command.');
+    console.log('[AutoPilot] 扩展已初始化 v3.2.0。在扩展设置中使用 AutoPilot 开关或使用 /autopilot 命令。');
 }
