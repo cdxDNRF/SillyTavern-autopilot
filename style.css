@@ -47,6 +47,12 @@
     border: 1px solid rgba(158, 158, 158, 0.3);
 }
 
+.autopilot-paused {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.4);
+}
+
 @keyframes autopilot-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
@@ -64,11 +70,55 @@
     align-items: center;
     gap: 8px;
     font-size: 13px;
+    flex-wrap: wrap;
 }
 
 .autopilot_row input[type="number"] {
     width: 60px;
     text-align: center;
+}
+
+.autopilot_section_title {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.8;
+    margin-top: 8px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.autopilot_section_title:first-child {
+    margin-top: 0;
+}
+
+.autopilot_button_row {
+    display: flex;
+    gap: 5px;
+    margin: 5px 0;
+    flex-wrap: wrap;
+}
+
+.autopilot_button_row button {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+    flex: 1;
+    min-width: 70px;
+    text-align: center;
+}
+
+.autopilot-turn-counter {
+    font-size: 12px;
+    font-weight: bold;
+    padding: 2px 8px;
+    background: rgba(74, 144, 217, 0.15);
+    border-radius: 3px;
+    border: 1px solid rgba(74, 144, 217, 0.3);
+    display: inline-block;
 }
 
 .autopilot-director-settings {
@@ -88,6 +138,32 @@
     min-height: 40px;
     opacity: 0.85;
     font-size: 12px !important;
+}
+
+.autopilot_field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.autopilot_field_label {
+    font-size: 11px;
+    opacity: 0.7;
+    font-weight: 600;
+}
+
+.autopilot-char-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-left: 8px;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 3px 0;
+}
+
+.autopilot-char-list label {
+    cursor: pointer;
 }
 
 .autopilot_stats {
