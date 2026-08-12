@@ -570,14 +570,17 @@ function injectExtensionSettings() {
 
     const html = `
     <div id="autopilot_ext_container" class="extension_container" style="margin-bottom: 10px;">
-        <div class="extension_toggle" style="display: flex; align-items: center; justify-content: space-between; padding: 5px 0; cursor: pointer;">
+        <div class="autopilot_ext_header" style="display: flex; align-items: center; justify-content: space-between; padding: 5px 0;">
             <label class="checkbox_label whitespacenowrap" title="Enable AutoPilot auto-dialogue for group chats">
                 <input id="autopilot_ext_toggle" type="checkbox" />
                 <span><i class="fa-solid fa-plane-departure"></i> AutoPilot</span>
             </label>
-            <span id="autopilot_ext_status" class="autopilot-status autopilot-off">Stopped</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="autopilot_ext_status" class="autopilot-status autopilot-off">Stopped</span>
+                <i id="autopilot_ext_collapse" class="fa-solid fa-chevron-down autopilot-collapse-icon" title="Click to expand/collapse settings" style="cursor: pointer; font-size: 14px; padding: 2px 6px;"></i>
+            </div>
         </div>
-        <div id="autopilot_ext_settings_body" class="extension_settings_body" style="display: none; padding: 5px 10px;">
+        <div id="autopilot_ext_settings_body" class="extension_settings_body" style="padding: 5px 10px;">
             ${buildSettingsHTML()}
         </div>
     </div>`;
@@ -608,7 +611,10 @@ function injectGroupChatUI() {
                 <input id="autopilot_toggle" type="checkbox" />
                 <span><i class="fa-solid fa-plane-departure"></i> AutoPilot</span>
             </label>
-            <span id="autopilot_status" class="autopilot-status autopilot-off">Stopped</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="autopilot_status" class="autopilot-status autopilot-off">Stopped</span>
+                <i id="autopilot_group_settings" class="fa-solid fa-gear autopilot-group-settings-icon" title="Open AutoPilot settings" style="cursor: pointer; font-size: 14px; padding: 2px 6px;"></i>
+            </div>
         </div>
     </div>`;
 
@@ -632,10 +638,19 @@ function bindExtUIEvents() {
         }
     });
 
-    // Click header to toggle settings body (but not when clicking the checkbox)
-    $('#autopilot_ext_container .extension_toggle').off('click').on('click', function (e) {
-        if ($(e.target).is('input') || $(e.target).is('span') || $(e.target).is('i')) return;
-        $('#autopilot_ext_settings_body').slideToggle();
+    // Collapse/expand settings via chevron icon
+    $('#autopilot_ext_collapse').off('click').on('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const body = $('#autopilot_ext_settings_body');
+        const icon = $(this);
+        body.slideToggle(200, function() {
+            if (body.is(':visible')) {
+                icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+            } else {
+                icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+            }
+        });
     });
 
     // Pause/Resume button
@@ -733,6 +748,27 @@ function bindGroupUIEvents() {
         } else {
             stopAutoPilot();
         }
+    });
+
+    // Settings gear button: open Extensions panel and scroll to AutoPilot settings
+    $('#autopilot_group_settings').off('click').on('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Open the extensions settings panel
+        const extButton = $('#extensions_settings_button');
+        if (extButton.length > 0) {
+            extButton[0].click();
+        }
+        // Scroll to AutoPilot container after panel opens
+        setTimeout(() => {
+            const container = $('#autopilot_ext_container');
+            if (container.length > 0) {
+                // Make sure settings body is visible
+                $('#autopilot_ext_settings_body').slideDown(200);
+                $('#autopilot_ext_collapse').removeClass('fa-chevron-right').addClass('fa-chevron-down');
+                container[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 400);
     });
 }
 

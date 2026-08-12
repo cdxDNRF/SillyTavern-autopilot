@@ -176,6 +176,16 @@
     border-top: 1px solid var(--SmartThemeBorderColor);
 }
 
+.autopilot-collapse-icon, .autopilot-group-settings-icon {
+    opacity: 0.6;
+    transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.autopilot-collapse-icon:hover, .autopilot-group-settings-icon:hover {
+    opacity: 1;
+    color: var(--SmartThemeQuoteColor, #4a90d9);
+}
+
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
