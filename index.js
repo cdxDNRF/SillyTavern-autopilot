@@ -100,8 +100,7 @@ function loadSettings() {
     if (!extension_settings[MODULE_KEY]) {
         extension_settings[MODULE_KEY] = {};
     }
-    Object.assign(extension_settings[MODULE_KEY], defaultSettings);
-    // Ensure new fields are added for upgrades
+    // Only add missing keys from defaults — do NOT overwrite existing saved settings
     for (const key of Object.keys(defaultSettings)) {
         if (extension_settings[MODULE_KEY][key] === undefined) {
             extension_settings[MODULE_KEY][key] = defaultSettings[key];
@@ -127,6 +126,8 @@ function getSettings() {
 
 function saveSettings() {
     saveSettingsDebounced();
+    // Auto-sync all panels so changes in one panel reflect in all others
+    syncAllUI();
 }
 
 // ==================== Helper: Detect Chat Mode ====================
@@ -916,22 +917,18 @@ function bindInlineEvents(containerSelector) {
     $(document).off('change', `${c} #autopilot_inline_genre`).on('change', `${c} #autopilot_inline_genre`, function () {
         getSettings().plotGenre = String($(this).val());
         saveSettings();
-        // Sync ext panel
-        $('#autopilot_ext_genre').val(String($(this).val()));
     });
 
     // Intensity
     $(document).off('change', `${c} #autopilot_inline_intensity`).on('change', `${c} #autopilot_inline_intensity`, function () {
         getSettings().plotIntensity = String($(this).val());
         saveSettings();
-        $('#autopilot_ext_intensity').val(String($(this).val()));
     });
 
     // Plot direction
     $(document).off('input', `${c} #autopilot_inline_plot_direction`).on('input', `${c} #autopilot_inline_plot_direction`, function () {
         getSettings().plotDirection = String($(this).val());
         saveSettings();
-        $('#autopilot_ext_plot_direction').val(String($(this).val()));
     });
 
     // Delay
@@ -950,19 +947,12 @@ function bindInlineEvents(containerSelector) {
         const val = Math.max(0, Number($(this).val()) || 0);
         getSettings().maxTurns = val;
         saveSettings();
-        updateTurnDisplay();
     });
 
     // Story Director toggle
     $(document).off('input', `${c} #autopilot_inline_director`).on('input', `${c} #autopilot_inline_director`, function () {
         getSettings().storyDirector = $(this).prop('checked');
         saveSettings();
-        $('#autopilot_ext_director').prop('checked', $(this).prop('checked'));
-        if (getSettings().storyDirector) {
-            $('#autopilot_ext_director_settings').removeClass('hidden');
-        } else {
-            $('#autopilot_ext_director_settings').addClass('hidden');
-        }
     });
 
     // Pause button
@@ -1058,10 +1048,8 @@ function savePreset(name) {
         });
     }
 
+    // saveSettings() calls syncAllUI() which refreshes preset dropdowns
     saveSettings();
-    refreshInlineSettings();
-    // Re-sync select values
-    syncPresetSelects();
     toastr.success(`预设「${name}」已保存`, 'AutoPilot', { timeOut: 2000 });
 }
 
@@ -1079,24 +1067,9 @@ function loadPreset(name, containerSelector) {
     if (preset.singleChatMode) {
         settings.singleChatMode = preset.singleChatMode;
     }
+    // saveSettings() calls syncAllUI() which updates ALL panels
     saveSettings();
 
-    // Update inline UI
-    const c = containerSelector || '';
-    if (c) {
-        $(`${c} #autopilot_inline_plot_direction`).val(settings.plotDirection);
-        $(`${c} #autopilot_inline_genre`).val(settings.plotGenre);
-        $(`${c} #autopilot_inline_intensity`).val(settings.plotIntensity);
-        $(`${c} #autopilot_inline_single_mode`).val(settings.singleChatMode);
-    }
-
-    // Update ext panel
-    $('#autopilot_ext_plot_direction').val(settings.plotDirection);
-    $('#autopilot_ext_genre').val(settings.plotGenre);
-    $('#autopilot_ext_intensity').val(settings.plotIntensity);
-    $('#autopilot_ext_single_mode').val(settings.singleChatMode);
-
-    updateModeDisplay();
     toastr.success(`预设「${name}」已加载`, 'AutoPilot', { timeOut: 2000 });
 }
 
@@ -1111,9 +1084,8 @@ function deletePreset(name) {
     }
 
     settings.plotPresets.splice(idx, 1);
+    // saveSettings() calls syncAllUI() which refreshes preset dropdowns
     saveSettings();
-    refreshInlineSettings();
-    syncPresetSelects();
     toastr.info(`预设「${name}」已删除`, 'AutoPilot', { timeOut: 2000 });
 }
 
@@ -1523,6 +1495,32 @@ function syncExtUI() {
     updateModeDisplay();
 }
 
+// Sync inline panel elements (in both group chat and single chat containers)
+function syncInlineUI() {
+    const settings = getSettings();
+
+    // Update inline elements in all containers
+    const selectors = ['#autopilot_container', '#autopilot_single_container'];
+    for (const c of selectors) {
+        if ($(c).length === 0) continue;
+
+        $(`${c} #autopilot_inline_single_mode`).val(settings.singleChatMode);
+        $(`${c} #autopilot_inline_genre`).val(settings.plotGenre);
+        $(`${c} #autopilot_inline_intensity`).val(settings.plotIntensity);
+        $(`${c} #autopilot_inline_plot_direction`).val(settings.plotDirection);
+        $(`${c} #autopilot_inline_delay`).val(settings.delay);
+        $(`${c} #autopilot_inline_max_turns`).val(settings.maxTurns);
+        $(`${c} #autopilot_inline_director`).prop('checked', settings.storyDirector);
+    }
+
+    // Sync preset dropdowns
+    syncPresetSelects();
+
+    updateStatusDisplay();
+    updateTurnDisplay();
+    updateModeDisplay();
+}
+
 function syncGroupUI() {
     $('#autopilot_toggle').prop('checked', isRunning);
     updateStatusDisplay();
@@ -1533,8 +1531,10 @@ function syncSingleChatUI() {
     updateStatusDisplay();
 }
 
+// Master sync: updates ALL panels (ext + inline + toggles)
 function syncAllUI() {
     syncExtUI();
+    syncInlineUI();
     syncGroupUI();
     syncSingleChatUI();
 }
