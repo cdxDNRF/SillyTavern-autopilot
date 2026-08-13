@@ -205,3 +205,64 @@
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* Inline Settings Panel (chat area) */
+.autopilot_inline_body {
+    border-top: 1px solid var(--SmartThemeBorderColor);
+    margin-top: 5px;
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    animation: fadeIn 0.3s ease;
+}
+
+.autopilot_inline_row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.autopilot_inline_group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.autopilot_inline_label {
+    font-size: 11px;
+    opacity: 0.7;
+    font-weight: 600;
+}
+
+.autopilot_inline_select {
+    font-size: 12px !important;
+    min-width: 80px;
+}
+
+.autopilot_inline_textarea {
+    resize: vertical;
+    min-height: 36px;
+    font-size: 12px !important;
+    width: 100%;
+}
+
+.autopilot_inline_btn {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+    white-space: nowrap;
+}
+
+.autopilot_inline_btn_row {
+    display: flex;
+    gap: 5px;
+    margin-top: 4px;
+}
+
+.autopilot_inline_btn_row button {
+    flex: 1;
+    font-size: 11px !important;
+    padding: 3px 6px !important;
+    text-align: center;
+}

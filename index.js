@@ -74,6 +74,8 @@ const defaultSettings = {
     userActionPrompt: DEFAULT_USER_ACTION_PROMPT,
     // Character filter (group chat only)
     characterFilter: [],   // empty = all characters; array of character names
+    // Plot presets
+    plotPresets: [],       // Array of { name, direction, genre, intensity }
     // Stats
     stats: {
         totalMessages: 0,
@@ -112,6 +114,10 @@ function loadSettings() {
     // Ensure characterFilter is an array
     if (!Array.isArray(extension_settings[MODULE_KEY].characterFilter)) {
         extension_settings[MODULE_KEY].characterFilter = [];
+    }
+    // Ensure plotPresets is an array
+    if (!Array.isArray(extension_settings[MODULE_KEY].plotPresets)) {
+        extension_settings[MODULE_KEY].plotPresets = [];
     }
 }
 
@@ -631,6 +637,9 @@ function onChatChanged() {
 
     // Update mode display
     updateModeDisplay();
+
+    // Refresh inline settings (mode section visibility changes with chat type)
+    refreshInlineSettings();
 }
 
 // ==================== Character Filter ====================
@@ -754,6 +763,369 @@ function updateModeDisplay() {
         $('#autopilot_ext_single_mode_section').removeClass('hidden');
         $('#autopilot_ext_char_filter_section').addClass('hidden');
     }
+}
+
+// ==================== Inline Settings Panel (for chat area) ====================
+
+function buildInlineSettingsHTML() {
+    const settings = getSettings();
+
+    let genreOptions = '';
+    for (const [key, label] of Object.entries(PLOT_GENRES)) {
+        genreOptions += `<option value="${key}" ${settings.plotGenre === key ? 'selected' : ''}>${label}</option>`;
+    }
+
+    // Build preset options
+    let presetOptions = '<option value="">-- 选择预设 --</option>';
+    if (settings.plotPresets && settings.plotPresets.length > 0) {
+        for (const preset of settings.plotPresets) {
+            presetOptions += `<option value="${escapeHtml(preset.name)}">${escapeHtml(preset.name)}</option>`;
+        }
+    }
+
+    const singleModeSection = isGroupChat() ? 'hidden' : '';
+    const groupModeSection = isGroupChat() ? '' : 'hidden';
+
+    return `
+    <div class="autopilot_inline_body" style="padding: 8px; display: none;">
+
+        <div class="autopilot_inline_group ${singleModeSection}">
+            <div class="autopilot_inline_label">推进方式</div>
+            <select id="autopilot_inline_single_mode" class="text_pole textarea_compact autopilot_inline_select">
+                <option value="auto_play" ${settings.singleChatMode === 'auto_play' ? 'selected' : ''}>自动扮演</option>
+                <option value="narrative" ${settings.singleChatMode === 'narrative' ? 'selected' : ''}>叙事推进</option>
+            </select>
+        </div>
+
+        <div class="autopilot_inline_row">
+            <div class="autopilot_inline_group">
+                <div class="autopilot_inline_label">类型</div>
+                <select id="autopilot_inline_genre" class="text_pole textarea_compact autopilot_inline_select">
+                    ${genreOptions}
+                </select>
+            </div>
+            <div class="autopilot_inline_group">
+                <div class="autopilot_inline_label">强度</div>
+                <select id="autopilot_inline_intensity" class="text_pole textarea_compact autopilot_inline_select">
+                    <option value="low" ${settings.plotIntensity === 'low' ? 'selected' : ''}>低</option>
+                    <option value="medium" ${settings.plotIntensity === 'medium' ? 'selected' : ''}>中</option>
+                    <option value="high" ${settings.plotIntensity === 'high' ? 'selected' : ''}>高</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="autopilot_inline_group">
+            <div class="autopilot_inline_label">剧情方向</div>
+            <textarea id="autopilot_inline_plot_direction" class="text_pole textarea_compact autopilot_inline_textarea" rows="2" placeholder="例如：角色们发现了一座隐藏的地下城市...">${escapeHtml(settings.plotDirection)}</textarea>
+        </div>
+
+        <div class="autopilot_inline_row">
+            <div class="autopilot_inline_group" style="flex:1;">
+                <div class="autopilot_inline_label">预设</div>
+                <select id="autopilot_inline_preset_select" class="text_pole textarea_compact autopilot_inline_select">
+                    ${presetOptions}
+                </select>
+            </div>
+            <button id="autopilot_inline_preset_load" class="menu_button menu_button_small autopilot_inline_btn" title="加载选中的预设">加载</button>
+            <button id="autopilot_inline_preset_save" class="menu_button menu_button_small autopilot_inline_btn" title="保存当前剧情方向为新预设">保存</button>
+            <button id="autopilot_inline_preset_delete" class="menu_button menu_button_small autopilot_inline_btn" title="删除选中的预设">删除</button>
+        </div>
+
+        <div id="autopilot_inline_preset_name_row" class="autopilot_inline_row" style="display:none;">
+            <input id="autopilot_inline_preset_name" class="text_pole textarea_compact" type="text" placeholder="输入预设名称..." style="flex:1; font-size:12px;" />
+            <button id="autopilot_inline_preset_confirm" class="menu_button menu_button_small autopilot_inline_btn">确认</button>
+            <button id="autopilot_inline_preset_cancel" class="menu_button menu_button_small autopilot_inline_btn">取消</button>
+        </div>
+
+        <div class="autopilot_inline_row">
+            <div class="autopilot_inline_group">
+                <div class="autopilot_inline_label">间隔(秒)</div>
+                <input id="autopilot_inline_delay" class="text_pole textarea_compact" type="number" min="1" max="120" value="${settings.delay}" style="width:50px; text-align:center;" />
+            </div>
+            <div class="autopilot_inline_group">
+                <div class="autopilot_inline_label">最大轮次</div>
+                <input id="autopilot_inline_max_turns" class="text_pole textarea_compact" type="number" min="0" max="9999" value="${settings.maxTurns}" style="width:50px; text-align:center;" />
+            </div>
+            <label class="checkbox_label whitespacenowrap autopilot_inline_label" title="剧情导演定期注入剧情发展" style="margin-left:8px;">
+                <input id="autopilot_inline_director" type="checkbox" ${settings.storyDirector ? 'checked' : ''} />
+                <span>剧情导演</span>
+            </label>
+        </div>
+
+        <div class="autopilot_inline_btn_row">
+            <button id="autopilot_inline_pause" class="menu_button menu_button_small autopilot_inline_btn"><i class="fa-solid fa-pause"></i> 暂停</button>
+            <button id="autopilot_inline_next" class="menu_button menu_button_small autopilot_inline_btn"><i class="fa-solid fa-forward-step"></i> 下一轮</button>
+            <button id="autopilot_inline_director_btn" class="menu_button menu_button_small autopilot_inline_btn"><i class="fa-solid fa-clapperboard"></i> 导演介入</button>
+        </div>
+    </div>`;
+}
+
+function refreshInlineSettings() {
+    // Rebuild inline settings HTML in all locations
+    const html = buildInlineSettingsHTML();
+
+    // Single chat area
+    const singleBody = $('#autopilot_single_container .autopilot_inline_body');
+    if (singleBody.length > 0) {
+        const wasVisible = singleBody.is(':visible');
+        singleBody.replaceWith(html);
+        if (wasVisible) {
+            $('#autopilot_single_container .autopilot_inline_body').show();
+        }
+        bindInlineEvents('#autopilot_single_container');
+    }
+
+    // Group chat area
+    const groupBody = $('#autopilot_container .autopilot_inline_body');
+    if (groupBody.length > 0) {
+        const wasVisible = groupBody.is(':visible');
+        groupBody.replaceWith(html);
+        if (wasVisible) {
+            $('#autopilot_container .autopilot_inline_body').show();
+        }
+        bindInlineEvents('#autopilot_container');
+    }
+}
+
+function bindInlineEvents(containerSelector) {
+    const c = containerSelector;
+
+    // Toggle inline settings body
+    $(document).off('click', `${c} .autopilot-inline-toggle`).on('click', `${c} .autopilot-inline-toggle`, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const body = $(`${c} .autopilot_inline_body`);
+        const icon = $(this);
+        body.slideToggle(200, function() {
+            if (body.is(':visible')) {
+                icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+            } else {
+                icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+            }
+        });
+    });
+
+    // Mode selector
+    $(document).off('change', `${c} #autopilot_inline_single_mode`).on('change', `${c} #autopilot_inline_single_mode`, function () {
+        getSettings().singleChatMode = String($(this).val());
+        saveSettings();
+        updateModeDisplay();
+    });
+
+    // Genre
+    $(document).off('change', `${c} #autopilot_inline_genre`).on('change', `${c} #autopilot_inline_genre`, function () {
+        getSettings().plotGenre = String($(this).val());
+        saveSettings();
+        // Sync ext panel
+        $('#autopilot_ext_genre').val(String($(this).val()));
+    });
+
+    // Intensity
+    $(document).off('change', `${c} #autopilot_inline_intensity`).on('change', `${c} #autopilot_inline_intensity`, function () {
+        getSettings().plotIntensity = String($(this).val());
+        saveSettings();
+        $('#autopilot_ext_intensity').val(String($(this).val()));
+    });
+
+    // Plot direction
+    $(document).off('input', `${c} #autopilot_inline_plot_direction`).on('input', `${c} #autopilot_inline_plot_direction`, function () {
+        getSettings().plotDirection = String($(this).val());
+        saveSettings();
+        $('#autopilot_ext_plot_direction').val(String($(this).val()));
+    });
+
+    // Delay
+    $(document).off('input', `${c} #autopilot_inline_delay`).on('input', `${c} #autopilot_inline_delay`, function () {
+        const val = Math.max(1, Math.min(120, Number($(this).val()) || 5));
+        getSettings().delay = val;
+        saveSettings();
+        if (isRunning && autopilotTimer) {
+            clearInterval(autopilotTimer);
+            autopilotTimer = setInterval(autopilotWorker, val * 1000);
+        }
+    });
+
+    // Max turns
+    $(document).off('input', `${c} #autopilot_inline_max_turns`).on('input', `${c} #autopilot_inline_max_turns`, function () {
+        const val = Math.max(0, Number($(this).val()) || 0);
+        getSettings().maxTurns = val;
+        saveSettings();
+        updateTurnDisplay();
+    });
+
+    // Story Director toggle
+    $(document).off('input', `${c} #autopilot_inline_director`).on('input', `${c} #autopilot_inline_director`, function () {
+        getSettings().storyDirector = $(this).prop('checked');
+        saveSettings();
+        $('#autopilot_ext_director').prop('checked', $(this).prop('checked'));
+        if (getSettings().storyDirector) {
+            $('#autopilot_ext_director_settings').removeClass('hidden');
+        } else {
+            $('#autopilot_ext_director_settings').addClass('hidden');
+        }
+    });
+
+    // Pause button
+    $(document).off('click', `${c} #autopilot_inline_pause`).on('click', `${c} #autopilot_inline_pause`, function (e) {
+        e.preventDefault();
+        togglePause();
+    });
+
+    // Next turn button
+    $(document).off('click', `${c} #autopilot_inline_next`).on('click', `${c} #autopilot_inline_next`, function (e) {
+        e.preventDefault();
+        triggerNextTurnNow();
+    });
+
+    // Director now button
+    $(document).off('click', `${c} #autopilot_inline_director_btn`).on('click', `${c} #autopilot_inline_director_btn`, function (e) {
+        e.preventDefault();
+        triggerDirectorNow();
+    });
+
+    // Preset: load
+    $(document).off('click', `${c} #autopilot_inline_preset_load`).on('click', `${c} #autopilot_inline_preset_load`, function (e) {
+        e.preventDefault();
+        const presetName = $(`${c} #autopilot_inline_preset_select`).val();
+        if (!presetName) {
+            toastr.warning('请先选择一个预设。', 'AutoPilot');
+            return;
+        }
+        loadPreset(presetName, c);
+    });
+
+    // Preset: save (show name input)
+    $(document).off('click', `${c} #autopilot_inline_preset_save`).on('click', `${c} #autopilot_inline_preset_save`, function (e) {
+        e.preventDefault();
+        $(`${c} #autopilot_inline_preset_name_row`).slideDown(200);
+        $(`${c} #autopilot_inline_preset_name`).focus();
+    });
+
+    // Preset: confirm save
+    $(document).off('click', `${c} #autopilot_inline_preset_confirm`).on('click', `${c} #autopilot_inline_preset_confirm`, function (e) {
+        e.preventDefault();
+        const name = $(`${c} #autopilot_inline_preset_name`).val().trim();
+        if (!name) {
+            toastr.warning('请输入预设名称。', 'AutoPilot');
+            return;
+        }
+        savePreset(name);
+        $(`${c} #autopilot_inline_preset_name`).val('');
+        $(`${c} #autopilot_inline_preset_name_row`).slideUp(200);
+    });
+
+    // Preset: cancel save
+    $(document).off('click', `${c} #autopilot_inline_preset_cancel`).on('click', `${c} #autopilot_inline_preset_cancel`, function (e) {
+        e.preventDefault();
+        $(`${c} #autopilot_inline_preset_name`).val('');
+        $(`${c} #autopilot_inline_preset_name_row`).slideUp(200);
+    });
+
+    // Preset: delete
+    $(document).off('click', `${c} #autopilot_inline_preset_delete`).on('click', `${c} #autopilot_inline_preset_delete`, function (e) {
+        e.preventDefault();
+        const presetName = $(`${c} #autopilot_inline_preset_select`).val();
+        if (!presetName) {
+            toastr.warning('请先选择一个预设。', 'AutoPilot');
+            return;
+        }
+        deletePreset(presetName);
+    });
+}
+
+// ==================== Plot Presets ====================
+
+function savePreset(name) {
+    const settings = getSettings();
+    if (!Array.isArray(settings.plotPresets)) {
+        settings.plotPresets = [];
+    }
+
+    // Check if preset with same name exists, update it
+    const existing = settings.plotPresets.find(p => p.name === name);
+    if (existing) {
+        existing.direction = settings.plotDirection;
+        existing.genre = settings.plotGenre;
+        existing.intensity = settings.plotIntensity;
+        existing.singleChatMode = settings.singleChatMode;
+    } else {
+        settings.plotPresets.push({
+            name: name,
+            direction: settings.plotDirection,
+            genre: settings.plotGenre,
+            intensity: settings.plotIntensity,
+            singleChatMode: settings.singleChatMode,
+        });
+    }
+
+    saveSettings();
+    refreshInlineSettings();
+    // Re-sync select values
+    syncPresetSelects();
+    toastr.success(`预设「${name}」已保存`, 'AutoPilot', { timeOut: 2000 });
+}
+
+function loadPreset(name, containerSelector) {
+    const settings = getSettings();
+    const preset = settings.plotPresets.find(p => p.name === name);
+    if (!preset) {
+        toastr.warning(`找不到预设「${name}」`, 'AutoPilot');
+        return;
+    }
+
+    settings.plotDirection = preset.direction || '';
+    settings.plotGenre = preset.genre || 'free';
+    settings.plotIntensity = preset.intensity || 'medium';
+    if (preset.singleChatMode) {
+        settings.singleChatMode = preset.singleChatMode;
+    }
+    saveSettings();
+
+    // Update inline UI
+    const c = containerSelector || '';
+    if (c) {
+        $(`${c} #autopilot_inline_plot_direction`).val(settings.plotDirection);
+        $(`${c} #autopilot_inline_genre`).val(settings.plotGenre);
+        $(`${c} #autopilot_inline_intensity`).val(settings.plotIntensity);
+        $(`${c} #autopilot_inline_single_mode`).val(settings.singleChatMode);
+    }
+
+    // Update ext panel
+    $('#autopilot_ext_plot_direction').val(settings.plotDirection);
+    $('#autopilot_ext_genre').val(settings.plotGenre);
+    $('#autopilot_ext_intensity').val(settings.plotIntensity);
+    $('#autopilot_ext_single_mode').val(settings.singleChatMode);
+
+    updateModeDisplay();
+    toastr.success(`预设「${name}」已加载`, 'AutoPilot', { timeOut: 2000 });
+}
+
+function deletePreset(name) {
+    const settings = getSettings();
+    if (!Array.isArray(settings.plotPresets)) return;
+
+    const idx = settings.plotPresets.findIndex(p => p.name === name);
+    if (idx < 0) {
+        toastr.warning(`找不到预设「${name}」`, 'AutoPilot');
+        return;
+    }
+
+    settings.plotPresets.splice(idx, 1);
+    saveSettings();
+    refreshInlineSettings();
+    syncPresetSelects();
+    toastr.info(`预设「${name}」已删除`, 'AutoPilot', { timeOut: 2000 });
+}
+
+function syncPresetSelects() {
+    const settings = getSettings();
+    let presetOptions = '<option value="">-- 选择预设 --</option>';
+    if (settings.plotPresets && settings.plotPresets.length > 0) {
+        for (const preset of settings.plotPresets) {
+            presetOptions += `<option value="${escapeHtml(preset.name)}">${escapeHtml(preset.name)}</option>`;
+        }
+    }
+    $('#autopilot_inline_preset_select').html(presetOptions);
 }
 
 // ==================== UI Injection ====================
@@ -909,9 +1281,10 @@ function injectGroupChatUI() {
             </label>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span id="autopilot_status" class="autopilot-status autopilot-off">已停止</span>
-                <i id="autopilot_group_settings" class="fa-solid fa-gear autopilot-group-settings-icon" title="打开 AutoPilot 设置" style="cursor: pointer; font-size: 14px; padding: 2px 6px;"></i>
+                <i class="fa-solid fa-chevron-down autopilot-inline-toggle autopilot-collapse-icon" title="点击展开/折叠设置" style="cursor: pointer; font-size: 14px; padding: 2px 6px;"></i>
             </div>
         </div>
+        ${buildInlineSettingsHTML()}
     </div>`;
 
     const target = $('#rm_group_automode_label');
@@ -919,6 +1292,7 @@ function injectGroupChatUI() {
         target.after(html);
         uiInjected = true;
         bindGroupUIEvents();
+        bindInlineEvents('#autopilot_container');
         syncGroupUI();
     }
 }
@@ -939,36 +1313,36 @@ function injectSingleChatUI() {
             </label>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span id="autopilot_single_status" class="autopilot-status autopilot-off">已停止</span>
-                <i id="autopilot_single_settings" class="fa-solid fa-gear autopilot-group-settings-icon" title="打开 AutoPilot 设置" style="cursor: pointer; font-size: 14px; padding: 2px 6px;"></i>
+                <i class="fa-solid fa-chevron-down autopilot-inline-toggle autopilot-collapse-icon" title="点击展开/折叠设置" style="cursor: pointer; font-size: 14px; padding: 2px 6px;"></i>
             </div>
         </div>
+        ${buildInlineSettingsHTML()}
     </div>`;
 
     // Inject near the send button / form area for single chats
-    // Try multiple locations
-    let target = $('#send_form .options_button');  // Near send button area
+    let target = $('#send_form .options_button');
     if (target.length === 0) {
         target = $('#rightSendForm .options_button');
     }
     if (target.length === 0) {
-        // Fallback: inject after the send form
         target = $('#send_form');
         if (target.length > 0) {
             target.after(html);
             singleChatUiInjected = true;
             bindSingleChatUIEvents();
+            bindInlineEvents('#autopilot_single_container');
             syncSingleChatUI();
             return;
         }
     }
     if (target.length === 0) {
-        // Last resort: inject into the right panel
         target = $('#right-nav-panel .fa-paper-plane').parent();
     }
     if (target.length > 0) {
         target.first().after(html);
         singleChatUiInjected = true;
         bindSingleChatUIEvents();
+        bindInlineEvents('#autopilot_single_container');
         syncSingleChatUI();
     }
 }
@@ -1109,57 +1483,6 @@ function bindGroupUIEvents() {
             stopAutoPilot();
         }
     });
-
-    $(document).off('click', '#autopilot_group_settings').on('click', '#autopilot_group_settings', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Try multiple selectors to open the extensions settings panel
-        const selectors = [
-            '#extensions_settings_button',
-            '#extensions_button',
-            '.extensions_settings_button',
-            '#rightNavDrawerIcon',
-            '[data-drawer-toggle="extensions"]',
-        ];
-
-        let opened = false;
-        for (const sel of selectors) {
-            const btn = $(sel);
-            if (btn.length > 0) {
-                btn[0].click();
-                opened = true;
-                break;
-            }
-        }
-
-        if (!opened) {
-            const panel = $('#extensions_settings');
-            if (panel.length > 0) {
-                panel.show();
-                opened = true;
-            }
-        }
-
-        setTimeout(() => {
-            const container = $('#autopilot_ext_container');
-            if (container.length > 0) {
-                $('#autopilot_ext_settings_body').slideDown(200);
-                $('#autopilot_ext_collapse').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                container[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } else {
-                injectExtensionSettings();
-                setTimeout(() => {
-                    const c = $('#autopilot_ext_container');
-                    if (c.length > 0) {
-                        $('#autopilot_ext_settings_body').slideDown(200);
-                        $('#autopilot_ext_collapse').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                        c[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }, 200);
-            }
-        }, 500);
-    });
 }
 
 function bindSingleChatUIEvents() {
@@ -1171,60 +1494,6 @@ function bindSingleChatUIEvents() {
         } else {
             stopAutoPilot();
         }
-    });
-
-    $(document).off('click', '#autopilot_single_settings').on('click', '#autopilot_single_settings', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Try multiple selectors to open the extensions settings panel
-        const selectors = [
-            '#extensions_settings_button',
-            '#extensions_button',
-            '.extensions_settings_button',
-            '#rightNavDrawerIcon',
-            '[data-drawer-toggle="extensions"]',
-        ];
-
-        let opened = false;
-        for (const sel of selectors) {
-            const btn = $(sel);
-            if (btn.length > 0) {
-                btn[0].click();
-                opened = true;
-                break;
-            }
-        }
-
-        // If no button found, try opening via the panel itself
-        if (!opened) {
-            const panel = $('#extensions_settings');
-            if (panel.length > 0) {
-                panel.show();
-                opened = true;
-            }
-        }
-
-        // Scroll to AutoPilot container after panel opens
-        setTimeout(() => {
-            const container = $('#autopilot_ext_container');
-            if (container.length > 0) {
-                $('#autopilot_ext_settings_body').slideDown(200);
-                $('#autopilot_ext_collapse').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                container[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } else {
-                // If container doesn't exist yet, try to inject it
-                injectExtensionSettings();
-                setTimeout(() => {
-                    const c = $('#autopilot_ext_container');
-                    if (c.length > 0) {
-                        $('#autopilot_ext_settings_body').slideDown(200);
-                        $('#autopilot_ext_collapse').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                        c[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }, 200);
-            }
-        }, 500);
     });
 }
 
