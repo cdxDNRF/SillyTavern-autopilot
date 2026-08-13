@@ -1,6 +1,6 @@
 /* AutoPilot Extension Styles */
 
-#autopilot_container, #autopilot_ext_container {
+#autopilot_container, #autopilot_ext_container, #autopilot_single_container {
     margin-top: 5px;
     padding: 8px;
     border: 1px solid var(--SmartThemeBorderColor);
@@ -9,7 +9,7 @@
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-#autopilot_container:has(input:checked), #autopilot_ext_container:has(input:checked) {
+#autopilot_container:has(input:checked), #autopilot_ext_container:has(input:checked), #autopilot_single_container:has(input:checked) {
     border-color: var(--SmartThemeQuoteColor, #4a90d9) !important;
     box-shadow: 0 0 8px rgba(74, 144, 217, 0.3);
 }
@@ -119,6 +119,21 @@
     border-radius: 3px;
     border: 1px solid rgba(74, 144, 217, 0.3);
     display: inline-block;
+}
+
+.autopilot-mode-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: rgba(156, 39, 176, 0.15);
+    border-radius: 3px;
+    border: 1px solid rgba(156, 39, 176, 0.3);
+    color: #ce93d8;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+.hidden {
+    display: none !important;
 }
 
 .autopilot-director-settings {
