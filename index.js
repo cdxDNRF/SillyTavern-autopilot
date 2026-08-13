@@ -49,13 +49,20 @@ const DEFAULT_DIRECTOR_PROMPT = [
 ].join(' ');
 
 const DEFAULT_USER_ACTION_PROMPT = [
-    'You are playing as {{user}} in an ongoing roleplay with {{char}}.',
-    'Based on the conversation history and the story so far, write {{user}}\'s next action or dialogue.',
-    'Stay in character for {{user}} and react naturally to the current situation.',
-    'Write in the same style and language as the existing chat.',
-    'Write only {{user}}\'s action/dialogue, do not write {{char}}\'s response.',
-    'Keep it concise (1-3 sentences) unless the situation calls for more detail.',
-].join(' ');
+    'You are the story driver for an ongoing roleplay between {{user}} and {{char}}.',
+    'Your task: write {{user}}\'s NEXT action that ADVANCES THE PLOT FORWARD.',
+    '',
+    'CRITICAL RULES:',
+    '1. NEVER repeat or rephrase what already happened in the conversation.',
+    '2. NEVER write {{char}}\'s dialogue or actions — only {{user}}\'s.',
+    '3. ALWAYS introduce something NEW: a new decision, a question, a physical action, a change of topic, a reaction to something not yet addressed, or moving to a new location/situation.',
+    '4. Think about what would naturally happen NEXT to progress the story — then write {{user}} doing it.',
+    '5. Do NOT describe the current scene again. Assume the reader already knows what just happened.',
+    '6. Write in the same language as the existing chat.',
+    '7. Keep it to 1-4 sentences of action/dialogue.',
+    '',
+    'If the conversation seems stuck or repetitive, BREAK THE PATTERN: introduce a new element, ask a probing question, take an unexpected action, or shift the situation.',
+].join('\n');
 
 const defaultSettings = {
     autoStart: false,
@@ -337,59 +344,96 @@ function buildUserActionPrompt() {
     prompt = prompt.replace(/\{\{user\}\}/g, ctx.name1);
     prompt = prompt.replace(/\{\{char\}\}/g, ctx.name2);
 
+    // Add recent context summary to prevent repetition
+    const recentMessages = getRecentMessageSummary(5);
+    if (recentMessages) {
+        prompt += `\n\n--- RECENT CONVERSATION SUMMARY (do NOT repeat these) ---\n${recentMessages}`;
+    }
+
     // Add plot direction if specified
     if (settings.plotDirection && settings.plotDirection.trim()) {
-        prompt += `\n\nStory direction to follow: ${settings.plotDirection.trim()}`;
-        prompt += '\nSteer your actions toward this direction naturally.';
+        prompt += `\n\n--- PLOT DIRECTION ---\n${settings.plotDirection.trim()}`;
+        prompt += `\nActively steer the story toward this direction. Do not resolve it too quickly — build toward it progressively.`;
     }
 
     // Add genre if specified
     if (settings.plotGenre && settings.plotGenre !== 'free') {
         const genreName = PLOT_GENRES[settings.plotGenre] || settings.plotGenre;
-        prompt += `\nGenre: ${genreName}`;
+        prompt += `\n\nGenre: ${genreName}. Make your action fit this genre.`;
     }
 
-    // Add intensity
+    // Add intensity — now focused on story progression, not just "boldness"
     const intensityMap = {
-        'low': 'Keep your actions subtle and measured.',
-        'medium': 'Balance between casual and proactive actions.',
-        'high': 'Take bold, decisive actions that drive the story forward.',
+        'low': 'Progression pace: SLOW. Make small, incremental moves. One small step forward.',
+        'medium': 'Progression pace: MODERATE. Take a meaningful step that moves the story forward noticeably.',
+        'high': 'Progression pace: FAST. Make a significant, decisive move that dramatically changes the situation.',
     };
-    prompt += `\n${intensityMap[settings.plotIntensity] || intensityMap['medium']}`;
+    prompt += `\n\n${intensityMap[settings.plotIntensity] || intensityMap['medium']}`;
+
+    // Final emphasis
+    prompt += '\n\nREMEMBER: Your output must be DIFFERENT from what came before. Introduce NEW content only.';
 
     return prompt;
+}
+
+// Helper: get a brief summary of recent messages to prevent repetition
+function getRecentMessageSummary(count) {
+    const ctx = getContext();
+    if (!ctx.chat || ctx.chat.length === 0) return '';
+
+    const recent = ctx.chat.slice(-count);
+    const summaries = [];
+    for (const msg of recent) {
+        const name = msg.is_user ? (ctx.name1 || 'User') : (msg.name || ctx.name2 || 'Character');
+        const text = (msg.mes || '').substring(0, 100);
+        if (text.trim()) {
+            summaries.push(`[${name}]: ${text}${(msg.mes || '').length > 100 ? '...' : ''}`);
+        }
+    }
+    return summaries.join('\n');
 }
 
 function buildNarrativePrompt() {
     const ctx = getContext();
     const settings = getSettings();
 
-    let prompt = 'You are a narrative AI continuing an ongoing roleplay story.';
-    prompt += `\nWrite the next scene that advances the story.`;
+    let prompt = 'You are a narrative AI advancing an ongoing roleplay story.';
+    prompt += `\nWrite the NEXT scene that MOVES THE STORY FORWARD.`;
     prompt += `\nInclude both ${ctx.name2} (the character) and ${ctx.name1} (the user) in the scene.`;
-    prompt += `\nWrite their actions, dialogue, and interactions naturally.`;
-    prompt += `\nWrite in the same style and language as the existing chat.`;
+    prompt += `\nWrite their actions, dialogue, and interactions.`;
+    prompt += `\nWrite in the same language as the existing chat.`;
     prompt += `\nDo not write more than 3-4 paragraphs.`;
+
+    // Anti-repetition rules
+    prompt += `\n\nCRITICAL: Do NOT repeat or rephrase what already happened.`;
+    prompt += `\nIntroduce NEW events, decisions, or situations that progress the story.`;
+    prompt += `\nIf the story feels stuck, introduce a twist, a new character, a discovery, or a change of scenery.`;
+
+    // Add recent context summary
+    const recentMessages = getRecentMessageSummary(5);
+    if (recentMessages) {
+        prompt += `\n\n--- RECENT CONVERSATION (do NOT repeat these) ---\n${recentMessages}`;
+    }
 
     // Add plot direction
     if (settings.plotDirection && settings.plotDirection.trim()) {
-        prompt += `\n\nStory direction: ${settings.plotDirection.trim()}`;
-        prompt += '\nAdvance the story toward this direction.';
+        prompt += `\n\n--- PLOT DIRECTION ---\n${settings.plotDirection.trim()}`;
+        prompt += `\nAdvance the story toward this direction. Build toward it progressively.`;
     }
 
     // Add genre
     if (settings.plotGenre && settings.plotGenre !== 'free') {
         const genreName = PLOT_GENRES[settings.plotGenre] || settings.plotGenre;
-        prompt += `\nGenre: ${genreName}`;
+        prompt += `\n\nGenre: ${genreName}.`;
     }
 
     // Add intensity
     const intensityMap = {
-        'low': 'Keep the scene calm and gradual.',
-        'medium': 'Balance between calm and dramatic moments.',
-        'high': 'Make the scene dramatic and impactful.',
+        'low': 'Progression pace: SLOW. Gradual, small developments.',
+        'medium': 'Progression pace: MODERATE. Meaningful story advancement.',
+        'high': 'Progression pace: FAST. Dramatic, impactful scene that significantly changes the story.',
     };
-    prompt += `\n${intensityMap[settings.plotIntensity] || intensityMap['medium']}`;
+    prompt += `\n\n${intensityMap[settings.plotIntensity] || intensityMap['medium']}`;
 
     return prompt;
 }
@@ -399,6 +443,12 @@ function buildNarrativePrompt() {
 function buildDirectorPrompt() {
     const settings = getSettings();
     let prompt = settings.directorPrompt || DEFAULT_DIRECTOR_PROMPT;
+
+    // Add recent context to avoid repeating events
+    const recentMessages = getRecentMessageSummary(6);
+    if (recentMessages) {
+        prompt += `\n\n--- RECENT CONVERSATION (do NOT repeat these events) ---\n${recentMessages}`;
+    }
 
     // Add genre if specified
     if (settings.plotGenre && settings.plotGenre !== 'free') {
@@ -424,6 +474,9 @@ function buildDirectorPrompt() {
         prompt += `\n\nImportant plot direction from the user: ${settings.plotDirection.trim()}`;
         prompt += '\nSteer the story toward this direction. Do not resolve it too quickly.';
     }
+
+    // Anti-repetition emphasis
+    prompt += '\n\nIMPORTANT: Your narrative event must be NEW and DIFFERENT from anything in the recent conversation. Introduce a genuinely new plot element.';
 
     return prompt;
 }
