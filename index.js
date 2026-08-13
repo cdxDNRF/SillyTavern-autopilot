@@ -1100,7 +1100,8 @@ function bindExtUIEvents() {
 }
 
 function bindGroupUIEvents() {
-    $('#autopilot_toggle').off('input').on('input', function () {
+    // Use document-level delegation so events survive DOM re-renders
+    $(document).off('input', '#autopilot_toggle').on('input', '#autopilot_toggle', function () {
         const enabled = $(this).prop('checked');
         if (enabled) {
             startAutoPilot();
@@ -1109,26 +1110,61 @@ function bindGroupUIEvents() {
         }
     });
 
-    $('#autopilot_group_settings').off('click').on('click', function (e) {
+    $(document).off('click', '#autopilot_group_settings').on('click', '#autopilot_group_settings', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        const extButton = $('#extensions_settings_button');
-        if (extButton.length > 0) {
-            extButton[0].click();
+
+        // Try multiple selectors to open the extensions settings panel
+        const selectors = [
+            '#extensions_settings_button',
+            '#extensions_button',
+            '.extensions_settings_button',
+            '#rightNavDrawerIcon',
+            '[data-drawer-toggle="extensions"]',
+        ];
+
+        let opened = false;
+        for (const sel of selectors) {
+            const btn = $(sel);
+            if (btn.length > 0) {
+                btn[0].click();
+                opened = true;
+                break;
+            }
         }
+
+        if (!opened) {
+            const panel = $('#extensions_settings');
+            if (panel.length > 0) {
+                panel.show();
+                opened = true;
+            }
+        }
+
         setTimeout(() => {
             const container = $('#autopilot_ext_container');
             if (container.length > 0) {
                 $('#autopilot_ext_settings_body').slideDown(200);
                 $('#autopilot_ext_collapse').removeClass('fa-chevron-right').addClass('fa-chevron-down');
                 container[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                injectExtensionSettings();
+                setTimeout(() => {
+                    const c = $('#autopilot_ext_container');
+                    if (c.length > 0) {
+                        $('#autopilot_ext_settings_body').slideDown(200);
+                        $('#autopilot_ext_collapse').removeClass('fa-chevron-right').addClass('fa-chevron-down');
+                        c[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 200);
             }
-        }, 400);
+        }, 500);
     });
 }
 
 function bindSingleChatUIEvents() {
-    $('#autopilot_single_toggle').off('input').on('input', function () {
+    // Use document-level delegation so events survive DOM re-renders
+    $(document).off('input', '#autopilot_single_toggle').on('input', '#autopilot_single_toggle', function () {
         const enabled = $(this).prop('checked');
         if (enabled) {
             startAutoPilot();
@@ -1137,21 +1173,58 @@ function bindSingleChatUIEvents() {
         }
     });
 
-    $('#autopilot_single_settings').off('click').on('click', function (e) {
+    $(document).off('click', '#autopilot_single_settings').on('click', '#autopilot_single_settings', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        const extButton = $('#extensions_settings_button');
-        if (extButton.length > 0) {
-            extButton[0].click();
+
+        // Try multiple selectors to open the extensions settings panel
+        const selectors = [
+            '#extensions_settings_button',
+            '#extensions_button',
+            '.extensions_settings_button',
+            '#rightNavDrawerIcon',
+            '[data-drawer-toggle="extensions"]',
+        ];
+
+        let opened = false;
+        for (const sel of selectors) {
+            const btn = $(sel);
+            if (btn.length > 0) {
+                btn[0].click();
+                opened = true;
+                break;
+            }
         }
+
+        // If no button found, try opening via the panel itself
+        if (!opened) {
+            const panel = $('#extensions_settings');
+            if (panel.length > 0) {
+                panel.show();
+                opened = true;
+            }
+        }
+
+        // Scroll to AutoPilot container after panel opens
         setTimeout(() => {
             const container = $('#autopilot_ext_container');
             if (container.length > 0) {
                 $('#autopilot_ext_settings_body').slideDown(200);
                 $('#autopilot_ext_collapse').removeClass('fa-chevron-right').addClass('fa-chevron-down');
                 container[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                // If container doesn't exist yet, try to inject it
+                injectExtensionSettings();
+                setTimeout(() => {
+                    const c = $('#autopilot_ext_container');
+                    if (c.length > 0) {
+                        $('#autopilot_ext_settings_body').slideDown(200);
+                        $('#autopilot_ext_collapse').removeClass('fa-chevron-right').addClass('fa-chevron-down');
+                        c[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 200);
             }
-        }, 400);
+        }, 500);
     });
 }
 
