@@ -7,7 +7,7 @@
     "css": "style.css",
     "author": "AutoPilot",
     "version": "4.3.1",
-    "homePage": "https://github.com/cdxDNRF/autopilot",
+    "homePage": "https://github.com/cdxDNRF/SillyTavern-autopilot",
     "auto_update": true,
     "hooks": {
         "activate": "init"
